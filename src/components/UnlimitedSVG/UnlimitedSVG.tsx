@@ -1,51 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
-import { InputManagerRefType } from '../inputManager';
-import { Camera } from '../Camera.ts';
+import { InputManager } from '../../globals/InputManager.ts';
+import { Camera } from '../../globals/Camera.ts';
 
-function UnlimitedSVG({ inputManager }: { inputManager: InputManagerRefType }) {
-    const [viewBox, setViewBox] = useState({ x: -window.innerWidth / 2, y: -window.innerHeight / 2, sizeX: window.innerWidth, sizeY: window.innerHeight, width: window.innerWidth, height: window.innerHeight });
-    const position = useRef({ x: 0, y: 0, zoom: 1 });
-    const lastPosition = useRef({ x: 0, y: 0 });
+function UnlimitedSVG() {
 
+    const mySVGref = useRef<SVGSVGElement>(null);
 
-
-    function update(deltaTime: number) {
-        
-        if (inputManager.current.pressed('P0')) {
-            lastPosition.current.x = inputManager.current.primaryPosition.x + position.current.x;
-            lastPosition.current.y = inputManager.current.primaryPosition.y + position.current.y;
-        }
-        if (inputManager.current.has('P0')) {
-            position.current.x = (lastPosition.current.x - inputManager.current.primaryPosition.x);
-            position.current.y = (lastPosition.current.y - inputManager.current.primaryPosition.y);
-        }
+    function update() {
+        if (!mySVGref.current) return;
 
 
-        setViewBox({
-            x: -window.innerWidth / 2 + position.current.x,
-            y: -window.innerHeight / 2 + position.current.y,
-            sizeX: window.innerWidth * position.current.zoom,
-            sizeY: window.innerHeight * position.current.zoom,
+        const viewBox = Camera.viewBox;
+        mySVGref.current.setAttribute('width', `${window.innerWidth}`);
+        mySVGref.current.setAttribute('height', `${window.innerHeight}`);
+        mySVGref.current.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
 
-            width: window.innerWidth,
-            height: window.innerHeight
-        });
     }
 
 
     useEffect(() => {
-        inputManager.current.bindUpdate(update);
-        // window.addEventListener('resize', resize);
+        InputManager.bindUpdate(update);
+
         return () => {
-            inputManager.current.unbindUpdate(update);
-            // window.removeEventListener('resize', resize);
+            InputManager.unbindUpdate(update);
+
         }
     }, [])
 
 
-
     return (
-        <svg width={viewBox.width} height={viewBox.height} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.sizeX} ${viewBox.sizeY}`}>
+        <svg ref={mySVGref} width={Camera.viewBox.width} height={Camera.viewBox.height} viewBox={`${Camera.viewBox.x} ${Camera.viewBox.y} ${Camera.viewBox.width} ${Camera.viewBox.height}`}>
             <defs>
                 <pattern id="gridPattern" x="-7" y="-7" width="100" height="100" patternUnits="userSpaceOnUse">
                     <g id="plusPattern">

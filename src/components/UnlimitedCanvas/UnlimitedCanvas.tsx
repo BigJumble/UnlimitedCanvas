@@ -1,10 +1,10 @@
 /// <reference types="@webgpu/types" />
 import { useEffect, useRef } from 'react';
 import { initWebGPU } from './initWebGPU';
-import { InputManagerRefType } from '../inputManager';
+import { InputManager } from '../../globals/InputManager';
 
 
-function UnlimitedCanvas({ inputManager }: { inputManager: InputManagerRefType }) {
+function UnlimitedCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const dimensions = useRef({ width: window.innerWidth, height: window.innerHeight });
 
@@ -40,10 +40,10 @@ function UnlimitedCanvas({ inputManager }: { inputManager: InputManagerRefType }
     // const lastTime = useRef(0);
 
     function update(deltaTime: number) {
-        if (inputManager.current.pressed('P0')) {
-            console.log('P0 d1', deltaTime);
+        if (InputManager.released('P0')) {
+          console.log("released primary pointer");
         }
-    }
+      }
 
     async function init() {
         const webGPUState = await initWebGPU(canvasRef);
@@ -68,7 +68,7 @@ function UnlimitedCanvas({ inputManager }: { inputManager: InputManagerRefType }
     }
 
     useEffect(() => {     
-        inputManager.current.bindUpdate(update);
+        InputManager.bindUpdate(update);
 
         (async () => {
             // await init();
@@ -81,7 +81,7 @@ function UnlimitedCanvas({ inputManager }: { inputManager: InputManagerRefType }
         })();
 
         return () => {
-            inputManager.current.unbindUpdate(update);
+            InputManager.unbindUpdate(update);
         }
 
     }, []);
