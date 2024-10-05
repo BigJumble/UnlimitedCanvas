@@ -5,18 +5,22 @@ import { Camera } from '../../globals/Camera.ts';
 function UnlimitedSVG() {
 
     const mySVGref = useRef<SVGSVGElement>(null);
+    const myRectRef = useRef<SVGRectElement>(null);
 
-    function update() {
+    function update(deltaTime: number) {
         if (!mySVGref.current) return;
+        if (!myRectRef.current) return;
+        if (!Camera.changeMade) return;
 
-
-        const viewBox = Camera.viewBox;
+        // Move canvas
         mySVGref.current.setAttribute('width', `${window.innerWidth}`);
         mySVGref.current.setAttribute('height', `${window.innerHeight}`);
-        mySVGref.current.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        mySVGref.current.setAttribute('viewBox', `${Camera.viewBox.x} ${Camera.viewBox.y} ${Camera.viewBox.width} ${Camera.viewBox.height}`);
 
+        // loop pattern when moving
+        myRectRef.current.setAttribute('x', `${Math.round(Camera.viewBox.x / 100) * 100 - 108}`);
+        myRectRef.current.setAttribute('y', `${Math.round(Camera.viewBox.y / 100) * 100 - 108}`);
     }
-
 
     useEffect(() => {
         InputManager.bindUpdate(update);
@@ -38,15 +42,20 @@ function UnlimitedSVG() {
 
                         <line x1="0" y1="7" x2="14" y2="7" className="dynamicPattern2"></line>
                         <line x1="7" y1="0" x2="7" y2="14" className="dynamicPattern2"></line>
-
                     </g>
                 </pattern>
             </defs>
-            <rect x={-window.innerWidth} y={-window.innerHeight} width={window.innerWidth * 2} height={window.innerHeight * 2} fill="url(#gridPattern)" />
 
+            <rect ref={myRectRef}
+                x={Math.round(-window.innerWidth * 2 / 100) * 100 - 8 - 100}
+                y={Math.round(-window.innerHeight * 2 / 100) * 100 - 8 - 100}
+                width={Math.round(window.innerWidth * 4 / 100) * 100 + 16 + 200}
+                height={Math.round(window.innerHeight * 4 / 100) * 100 + 16 + 200}
+                fill="url(#gridPattern)"
+            />
 
         </svg>
     )
 }
 
-export default UnlimitedSVG
+export default UnlimitedSVG;

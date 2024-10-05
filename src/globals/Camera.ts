@@ -17,10 +17,9 @@ export class Camera {
     static lastPosition = {
         x: 0,
         y: 0,
+        x1: 0,
+        y1: 0,
     };
-
-    static #zoomSpeed = 0.01;
-    static #touchStartDistance = 0;
 
     static changeMade = false;
 
@@ -69,50 +68,65 @@ export class Camera {
     }
 
     static update(deltaTime: number) {
+        console.log(Camera.screenToGlobalPosition(), InputManager.primaryPosition);
         if (InputManager.pressed('P0')) {
+
             Camera.lastPosition.x = InputManager.primaryPosition.x;
-            Camera.lastPosition.y = InputManager.primaryPosition.y ;
+            Camera.lastPosition.y = InputManager.primaryPosition.y;
         }
 
         if (InputManager.pressed('P1')) {
-            Camera.#touchStartDistance = Math.hypot(
-                InputManager.primaryPosition.x - InputManager.secondaryPosition.x,
-                InputManager.primaryPosition.y - InputManager.secondaryPosition.y
-            );
+            Camera.lastPosition.x1 = InputManager.secondaryPosition.x;
+            Camera.lastPosition.y1 = InputManager.secondaryPosition.y;
         }
 
-        //BAD
-                            if (InputManager.has('P1')) {
-                                const currentDistance = Math.hypot(
-                                    InputManager.primaryPosition.x - InputManager.secondaryPosition.x,
-                                    InputManager.primaryPosition.y - InputManager.secondaryPosition.y
-                                );
-                                if (Camera.#touchStartDistance > 0) {
-                                    const oldZoom = Camera.position.zoom;
-                                    const zoomDelta = currentDistance - Camera.#touchStartDistance;
-                                    Camera.position.zoom *= 1 + zoomDelta * 0.005;
-                                    Camera.position.zoom = Math.max(0.25, Math.min(2, Camera.position.zoom));
 
-                                    // Apply zoom correction
-                                    const centerX = (InputManager.primaryPosition.x + InputManager.secondaryPosition.x) / 2;
-                                    const centerY = (InputManager.primaryPosition.y + InputManager.secondaryPosition.y) / 2;
-                                    const oldGlobalPosition = Camera.screenToGlobalPosition(centerX, centerY);
-                                    Camera.recalculateViewBox();
-                                    const newGlobalPosition = Camera.screenToGlobalPosition(centerX, centerY);
+        if (InputManager.has('P1')) {
+            
 
-                                    const deltaX = (oldGlobalPosition.x - newGlobalPosition.x) * Camera.position.zoom;
-                                    const deltaY = (oldGlobalPosition.y - newGlobalPosition.y) * Camera.position.zoom;
-                                    Camera.position.x += deltaX;
-                                    Camera.position.y += deltaY;
+            const globalOldPosition0 = Camera.screenToGlobalPosition(Camera.lastPosition.x, Camera.lastPosition.y);
+            const globalOldPosition1 = Camera.screenToGlobalPosition(Camera.lastPosition.x1, Camera.lastPosition.y1);
 
-                                    Camera.changeMade = true;
-                                }
-                                Camera.#touchStartDistance = currentDistance;
-                            }
+            const globalNewPosition0 = Camera.screenToGlobalPosition(InputManager.primaryPosition.x, InputManager.primaryPosition.y);
+            const globalNewPosition1 = Camera.screenToGlobalPosition(InputManager.secondaryPosition.x, InputManager.secondaryPosition.y);
+
+            //distance between the two points
+            const distance = Math.hypot(
+                globalNewPosition0.x - globalNewPosition1.x,
+                globalNewPosition0.y - globalNewPosition1.y
+            );
+
+            const oldDistance = Math.hypot(
+                globalOldPosition0.x - globalOldPosition1.x,
+                globalOldPosition0.y - globalOldPosition1.y
+            );
+
+            const distanceStrech = distance - oldDistance;
+
+            // Calculate zoom based on distanceStrech
+            const zoomFactor = 1 + distanceStrech / oldDistance;
+            const newZoom = Camera.position.zoom * zoomFactor;
+
+            Camera.position.zoom = Math.max(0.25, Math.min(2, newZoom));
+
+            Camera.recalculateViewBox();
+            Camera.#zoomCorrection(globalOldPosition0);
+
+            Camera.lastPosition.x = InputManager.primaryPosition.x;
+            Camera.lastPosition.y = InputManager.primaryPosition.y;
+            Camera.lastPosition.x1 = InputManager.secondaryPosition.x;
+            Camera.lastPosition.y1 = InputManager.secondaryPosition.y;
+
+            Camera.changeMade = true;
+
+        }
+
 
         if (InputManager.has('P0')) {
+
             const deltaX = Camera.lastPosition.x - InputManager.primaryPosition.x;
             const deltaY = Camera.lastPosition.y - InputManager.primaryPosition.y;
+
             Camera.position.x += deltaX;
             Camera.position.y += deltaY;
 
