@@ -1,4 +1,5 @@
 import { InputManager } from "./InputManager";
+import { Options, Tool } from "./Options";
 
 export class Camera {
     static viewBox = {
@@ -54,6 +55,7 @@ export class Camera {
 
     static handleWheel(e: WheelEvent) {
         e.preventDefault();
+        if(Options.pauseControls) return;
         const oldZoom = Camera.screenToGlobalPosition();
         if (Math.abs(e.deltaY) > 50) {
             Camera.position.zoom += e.deltaY > 0 ? -0.05 : 0.05;
@@ -68,7 +70,36 @@ export class Camera {
     }
 
     static update(deltaTime: number) {
-        console.log(Camera.screenToGlobalPosition(), InputManager.primaryPosition);
+
+        if(Options.selectedTool === Tool.RECENTER){
+            Options.pauseControls = true;
+            Camera.changeMade = true;
+            const targetX = 0;
+            const targetY = 0;
+            const targetZoom = 1;
+            const lerpFactor = 1 - Math.pow(0.001, deltaTime*2); // Adjust 0.001 to control speed
+
+            Camera.position.x += (targetX - Camera.position.x) * lerpFactor;
+            Camera.position.y += (targetY - Camera.position.y) * lerpFactor;
+            Camera.position.zoom += (targetZoom - Camera.position.zoom) * lerpFactor;
+            Camera.recalculateViewBox();
+
+            // Check if we're close enough to the target
+            if (Math.abs(Camera.position.x - targetX) < 1 && 
+                Math.abs(Camera.position.y - targetY) < 1 && 
+                Math.abs(Camera.position.zoom - targetZoom) < 0.01) {
+                Camera.position.x = targetX;
+                Camera.position.y = targetY;
+                Camera.position.zoom = targetZoom;
+                Camera.recalculateViewBox();
+                Options.selectedTool = Tool.MOVE;
+                Options.pauseControls = false;
+            }
+
+        }
+        if(Options.selectedTool !== Tool.MOVE) return;
+        if(Options.pauseControls) return;
+
         if (InputManager.pressed('P0')) {
 
             Camera.lastPosition.x = InputManager.primaryPosition.x;

@@ -16,7 +16,7 @@ export class InputManager {
     static secondaryTouchId: number | null = null;
 
     static #update = (timestamp: number) => {
-        const deltaTime = timestamp - InputManager.#lastTime;
+        const deltaTime = (timestamp - InputManager.#lastTime) / 1000;
         InputManager.#lastTime = timestamp;
 
         for (const callback of InputManager.#updateCallbacks) {
@@ -69,18 +69,27 @@ export class InputManager {
         if (e.pointerId !== InputManager.secondaryTouchId) {
             InputManager.primaryPosition = { x: e.clientX, y: e.clientY };
             InputManager.pressure = e.pressure;
+            if (e.pointerType === 'touch') {
+                InputManager.pressure = Math.min(e.height, e.width)/5;
+            }
         } else {
             InputManager.secondaryPosition = { x: e.clientX, y: e.clientY };
         }
     }
 
     static #handlePointerPress = (e: PointerEvent): void => {
-        if (InputManager.primaryTouchId === null) {
-            InputManager.#inputKeys.add('P0');
-            InputManager.#inputKeysOnce.add('P0');
-            InputManager.primaryPosition = { x: e.clientX, y: e.clientY };
-            InputManager.pressure = e.pressure;
-            InputManager.primaryTouchId = e.pointerId;
+        if (InputManager.primaryTouchId === null ) {
+            if(e.button === 0){
+                InputManager.#inputKeys.add('P0');
+                InputManager.#inputKeysOnce.add('P0');
+                InputManager.primaryPosition = { x: e.clientX, y: e.clientY };
+                InputManager.pressure = e.pressure;
+                //if touch then pressure is touch area
+                if (e.pointerType === 'touch') {
+                    InputManager.pressure = Math.min(e.height, e.width)/5;
+                }
+                InputManager.primaryTouchId = e.pointerId;
+            }
         } else {
             InputManager.#inputKeys.add('P1');
             InputManager.#inputKeysOnce.add('P1');
@@ -121,11 +130,13 @@ export class InputManager {
     static #handlePointerCancel = (e: PointerEvent): void => {
         if (e.pointerId === InputManager.primaryTouchId) {
             InputManager.#inputKeys.delete('P0');
+            InputManager.#inputKeysOnce.delete('P0');
             InputManager.#inputKeysReleased.add('P0');
             InputManager.primaryTouchId = null;
         } else {
             InputManager.#inputKeys.delete('P1');
             InputManager.#inputKeysReleased.add('P1');
+            InputManager.#inputKeysOnce.delete('P1');
             InputManager.secondaryTouchId = null;
         }
     }
@@ -144,6 +155,11 @@ export class InputManager {
         return isPrimary ? InputManager.primaryTouchId : InputManager.secondaryTouchId;
     }
 
+    static #handleResize = (): void => {
+        Camera.recalculateViewBox();
+        Camera.changeMade = true;
+    }
+
     static #initEventListeners(): void {
         window.addEventListener('pointermove', InputManager.#handlePointerMove);
         window.addEventListener('pointerdown', InputManager.#handlePointerPress);
@@ -152,6 +168,8 @@ export class InputManager {
         window.addEventListener('keydown', InputManager.#keydown);
         window.addEventListener('keyup', InputManager.#keyup);
         window.addEventListener('wheel', Camera.handleWheel, { passive: false });
+        window.addEventListener('resize', InputManager.#handleResize);
+
     }
 
     static #removeEventListeners(): void {
@@ -162,6 +180,7 @@ export class InputManager {
         window.removeEventListener('keydown', InputManager.#keydown);
         window.removeEventListener('keyup', InputManager.#keyup);
         window.removeEventListener('wheel', Camera.handleWheel);
+        window.removeEventListener('resize', InputManager.#handleResize);
     }
 
     static {
