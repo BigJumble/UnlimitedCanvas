@@ -10,4 +10,5 @@ export class Options {
     static pauseControls = false;
     static selectedTool = Tool.MOVE;
 
+
 }

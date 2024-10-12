@@ -32,7 +32,7 @@ class DrawManager {
         if (DrawManager.currentStroke.length > 0) {
             const lastPoint = DrawManager.currentStroke[DrawManager.currentStroke.length - 1];
             const distance = Math.sqrt(Math.pow(lastPoint.position[0] - currentPoint.x, 2) + Math.pow(lastPoint.position[1] - currentPoint.y, 2));
-            if (distance > 5) {
+            if (distance > 2) {
                 addDot();
             }
         } else {
@@ -75,6 +75,11 @@ class CanvasManager {
 
     static cameraUniformBuffer: GPUBuffer | null = null;
     static cameraBindGroup: GPUBindGroup | null = null;
+
+    static topology: GPUPrimitiveTopology = "triangle-strip";
+    static verteciesPerDot = 2; // auto
+
+
 
     static async init() {
         if (!this.canvasRef) {
@@ -145,7 +150,7 @@ class CanvasManager {
                 }],
             },
             primitive: {
-                topology: 'triangle-list',
+                topology: this.topology,
             }
         });
     }
@@ -197,7 +202,7 @@ class CanvasManager {
 
         
         this.currentStrokeBuffer = this.device.createBuffer({
-            size: 32 * 20000,
+            size: 32 * 16384,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
@@ -214,19 +219,20 @@ class CanvasManager {
     {
         if (!this.device || !this.currentStrokeBuffer) return;
         this.currentStrokeBufferSize = stroke.length;
-        if(stroke.length > 20000 || stroke.length === 0) return;
+        if(stroke.length >= 16384 || stroke.length === 0) return;
 
         const lastDot = stroke[stroke.length - 1];
         const data = new Float32Array([...lastDot.position, lastDot.size, 0, ...lastDot.color]);
         this.device.queue.writeBuffer(this.currentStrokeBuffer, (this.currentStrokeBufferSize - 1) * data.byteLength, data);
     }
 
-    static updateCameraUniformBuffer() {
+    static updateCameraUniformBuffer(elements:number) {
         if (!this.device || !this.cameraUniformBuffer) return;
         const cameraData = new Float32Array([
             window.innerWidth, window.innerHeight,
             Camera.position.x, -Camera.position.y,
             Camera.position.zoom,
+            elements
         ]);
 
         this.device.queue.writeBuffer(this.cameraUniformBuffer, 0, cameraData);
@@ -235,7 +241,7 @@ class CanvasManager {
     static render() {
         if (!this.device || !this.context || !this.linePipeline) return;
 
-        this.updateCameraUniformBuffer();
+        this.updateCameraUniformBuffer(this.currentStrokeBufferSize);
 
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
@@ -253,14 +259,15 @@ class CanvasManager {
         renderPass.setBindGroup(0, this.cameraBindGroup!);
 
         for (let i = 0; i < this.lineBindGroups.length; i++) {
+            if(DrawManager.strokes[i].points.length <= 1) continue;
             renderPass.setBindGroup(1, this.lineBindGroups[i]);
-            renderPass.draw(DrawManager.strokes[i].points.length * 3, 1, 0, 0);
+            renderPass.draw(DrawManager.strokes[i].points.length * this.verteciesPerDot, 1, 0, 0);
         }
 
-        if(this.currentStrokeBufferSize > 0)
+        if(this.currentStrokeBufferSize > 1)
         {
             renderPass.setBindGroup(1, this.currentStrokeBindGroup);
-            renderPass.draw(this.currentStrokeBufferSize * 3, 1, 0, 0);
+            renderPass.draw(this.currentStrokeBufferSize * this.verteciesPerDot, 1, 0, 0);
         }
 
         renderPass.end();
