@@ -43,8 +43,9 @@ function App() {
 
   return (
     <>
-      {/* <UnlimitedCanvas /> */}
+
       <UnlimitedSVG />
+      <UnlimitedCanvas />
       {showMenu && (
         <Menu menuPosition={menuPosition} handleCloseMenu={handleCloseMenu} />
       )}

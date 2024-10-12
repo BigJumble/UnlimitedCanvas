@@ -11,7 +11,7 @@ export async function initWebGPU(canvasRef: React.RefObject<HTMLCanvasElement>):
     throw new Error("WebGPU not supported on this browser.");
   }
 
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) {
     throw new Error("No appropriate GPUAdapter found.");
   }
@@ -26,6 +26,7 @@ export async function initWebGPU(canvasRef: React.RefObject<HTMLCanvasElement>):
   newContext.configure({
     device: newDevice,
     format: newPresentationFormat,
+    alphaMode: 'premultiplied',  // This allows for transparency when clear alpha is 0
   });
 
   return {
