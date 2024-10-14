@@ -11,7 +11,7 @@ export async function initWebGPU(canvasRef: React.RefObject<HTMLCanvasElement>):
     throw new Error("WebGPU not supported on this browser.");
   }
 
-  const adapter = await navigator.gpu.requestAdapter();
+  const adapter = await navigator.gpu.requestAdapter({powerPreference:"high-performance"});
   if (!adapter) {
     throw new Error("No appropriate GPUAdapter found.");
   }

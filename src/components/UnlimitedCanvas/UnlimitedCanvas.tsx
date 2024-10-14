@@ -81,6 +81,9 @@ class CanvasManager {
 
     static bindGroup1Layout: GPUBindGroupLayout | null = null;
 
+    static msaaTexture: GPUTexture | null = null;
+    static msaaView: GPUTextureView | null = null;
+
 
     static async init() {
         if (!this.canvasRef) {
@@ -95,9 +98,27 @@ class CanvasManager {
         this.context = webGPUState.context;
         this.presentationFormat = webGPUState.presentationFormat;
         this.lineShaderModule = createLineShader(this.device);
+        this.tryRecreateMSAATexture();
         this.createLinePipeline();
         this.createCameraUniformBuffer();
         this.createCurrentStrokeBuffer();
+    }
+
+    static tryRecreateMSAATexture(texture:GPUTexture | null = null) {
+        if (!this.device || !this.presentationFormat) return;
+        if(this.msaaTexture != null && texture != null)
+        {
+            if(texture.width != this.msaaTexture.width || texture.height != this.msaaTexture.height)
+                this.msaaTexture.destroy();
+        }
+        this.msaaTexture = this.device.createTexture({
+            size: [this.dimensions.width, this.dimensions.height],
+            sampleCount: 4,
+            format: this.presentationFormat,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
+
+        this.msaaView = this.msaaTexture.createView();
     }
 
     static createLinePipeline() {
@@ -152,6 +173,9 @@ class CanvasManager {
             },
             primitive: {
                 topology: this.topology,
+            },
+            multisample: {
+                count: 4,
             }
         });
     }
@@ -245,11 +269,15 @@ class CanvasManager {
         this.updateCameraUniformBuffer(this.currentStrokeBufferSize);
 
         const commandEncoder = this.device.createCommandEncoder();
-        const textureView = this.context.getCurrentTexture().createView();
+        const texture = this.context.getCurrentTexture();
+        const textureView = texture.createView();
+
+        this.tryRecreateMSAATexture(texture);
 
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                view: textureView,
+                view: this.msaaView!,
+                resolveTarget: textureView,
                 clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
                 loadOp: 'clear',
                 storeOp: 'store',
@@ -272,6 +300,7 @@ class CanvasManager {
         }
 
         renderPass.end();
+
 
         this.device.queue.submit([commandEncoder.finish()]);
     }
