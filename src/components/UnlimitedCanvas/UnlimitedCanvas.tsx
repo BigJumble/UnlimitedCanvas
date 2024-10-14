@@ -79,6 +79,7 @@ class CanvasManager {
     static topology: GPUPrimitiveTopology = "triangle-strip";
     static verteciesPerDot = 2; // auto
 
+    static bindGroup1Layout: GPUBindGroupLayout | null = null;
 
 
     static async init() {
@@ -112,7 +113,7 @@ class CanvasManager {
             ]
         });
 
-        const strokeBindGroupLayout = this.device.createBindGroupLayout({
+        this.bindGroup1Layout = this.device.createBindGroupLayout({
             entries: [
                 {
                     binding: 0,
@@ -123,7 +124,7 @@ class CanvasManager {
         });
 
         const pipelineLayout = this.device.createPipelineLayout({
-            bindGroupLayouts: [cameraBindGroupLayout, strokeBindGroupLayout]
+            bindGroupLayouts: [cameraBindGroupLayout, this.bindGroup1Layout]
         });
 
         this.linePipeline = this.device.createRenderPipeline({
@@ -180,7 +181,7 @@ class CanvasManager {
         // console.log(data,data.byteLength)
         const strokeBuffer = this.device.createBuffer({
             size: Math.max(data.byteLength),
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST ,
         });
 
         this.device.queue.writeBuffer(strokeBuffer, 0, data);
@@ -207,7 +208,7 @@ class CanvasManager {
         });
 
         this.currentStrokeBindGroup = this.device.createBindGroup({
-            layout: this.linePipeline!.getBindGroupLayout(1),
+            layout: this.bindGroup1Layout!,
             entries: [
                 { binding: 0, resource: { buffer: this.currentStrokeBuffer } }
             ]
